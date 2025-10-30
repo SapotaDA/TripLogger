@@ -1191,14 +1191,21 @@ header h1 {
 
 /* Map Page Layout */
 #map-page {
-  padding: 0;
+  padding: 0 !important;
   position: relative;
+  display: block !important;
+  overflow: hidden;
 }
 
 #map-page #map {
   width: 100%;
   height: 100%;
   border-radius: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* Responsive Trip Controls */
