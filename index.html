@@ -129,6 +129,49 @@
             <!-- Map Page -->
             <div class="page-content" id="map-page">
                 <div id="map"></div>
+                
+                <!-- Trip Control Panel -->
+                <div class="map-trip-controls" id="map-trip-controls">
+                    <div class="trip-timer-display">
+                        <div class="timer-icon">
+                            <i class="fas fa-stopwatch"></i>
+                        </div>
+                        <div class="timer-info">
+                            <span class="timer-label">Trip Duration</span>
+                            <span class="timer-value" id="map-trip-timer">00:00:00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="trip-stats-mini">
+                        <div class="stat-mini">
+                            <i class="fas fa-route"></i>
+                            <span id="map-trip-distance">0.00 km</span>
+                        </div>
+                        <div class="stat-mini">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span id="map-trip-speed">0.00 km/h</span>
+                        </div>
+                    </div>
+                    
+                    <div class="trip-action-buttons">
+                        <button class="btn-trip btn-trip-start" id="map-start-trip-btn">
+                            <i class="fas fa-play"></i>
+                            <span>Start Trip</span>
+                        </button>
+                        <button class="btn-trip btn-trip-pause" id="map-pause-trip-btn" style="display: none;">
+                            <i class="fas fa-pause"></i>
+                            <span>Pause</span>
+                        </button>
+                        <button class="btn-trip btn-trip-resume" id="map-resume-trip-btn" style="display: none;">
+                            <i class="fas fa-play"></i>
+                            <span>Resume</span>
+                        </button>
+                        <button class="btn-trip btn-trip-end" id="map-end-trip-btn" style="display: none;">
+                            <i class="fas fa-stop"></i>
+                            <span>End Trip</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Trips Page -->
