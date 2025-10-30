@@ -123,10 +123,15 @@ function setupAuthListener() {
             loadUserData();
             loadTrips();
             showAuthenticatedUI();
+            console.log('User authenticated:', user.email);
         } else {
             state.currentUser = null;
             showUnauthenticatedUI();
-            redirectToSignIn();
+            // Only redirect if we're on index.html, not if we're already on signin/signup
+            const currentPath = window.location.pathname;
+            if (!currentPath.includes('signin') && !currentPath.includes('signup')) {
+                redirectToSignIn();
+            }
         }
     });
 }
@@ -138,6 +143,14 @@ function showAuthenticatedUI() {
     // Hide auth buttons if they exist
     const authButtons = document.getElementById('auth-buttons');
     if (authButtons) authButtons.style.display = 'none';
+    
+    // Make sure dashboard page is visible
+    const dashboardPage = document.getElementById('dashboard-page');
+    if (dashboardPage) {
+        dashboardPage.classList.add('active');
+        dashboardPage.style.display = 'flex';
+        console.log('Dashboard page activated');
+    }
 }
 
 // Show unauthenticated UI
