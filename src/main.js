@@ -103,7 +103,17 @@ const elements = {
     allTripsList: document.getElementById('all-trips-list'),
     totalDistance: document.getElementById('total-distance'),
     totalTrips: document.getElementById('total-trips'),
-    avgSpeed: document.getElementById('avg-speed')
+    avgSpeed: document.getElementById('avg-speed'),
+
+    // Map Trip Controls
+    mapTripControls: document.getElementById('map-trip-controls'),
+    mapTripTimer: document.getElementById('map-trip-timer'),
+    mapTripDistance: document.getElementById('map-trip-distance'),
+    mapTripSpeed: document.getElementById('map-trip-speed'),
+    mapStartTripBtn: document.getElementById('map-start-trip-btn'),
+    mapPauseTripBtn: document.getElementById('map-pause-trip-btn'),
+    mapResumeTripBtn: document.getElementById('map-resume-trip-btn'),
+    mapEndTripBtn: document.getElementById('map-end-trip-btn')
 };
 
 // Initialize the application
@@ -315,6 +325,12 @@ function setupEventListeners() {
     if (elements.modalPauseTripBtn) elements.modalPauseTripBtn.addEventListener('click', pauseTrip);
     if (elements.modalResumeTripBtn) elements.modalResumeTripBtn.addEventListener('click', resumeTrip);
     if (elements.modalStopTripBtn) elements.modalStopTripBtn.addEventListener('click', stopTrip);
+
+    // Map Trip Controls
+    if (elements.mapStartTripBtn) elements.mapStartTripBtn.addEventListener('click', startMapTrip);
+    if (elements.mapPauseTripBtn) elements.mapPauseTripBtn.addEventListener('click', pauseMapTrip);
+    if (elements.mapResumeTripBtn) elements.mapResumeTripBtn.addEventListener('click', resumeMapTrip);
+    if (elements.mapEndTripBtn) elements.mapEndTripBtn.addEventListener('click', endMapTrip);
 
     // Notifications
     if (elements.notificationBtn) elements.notificationBtn.addEventListener('click', toggleNotificationPanel);
@@ -667,7 +683,7 @@ function stopLocationTracking() {
 
 // Handle location update
 function handleLocationUpdate(position) {
-    const { latitude, longitude } = position.coords;
+    const { latitude, longitude, speed } = position.coords;
     state.userLocation = [latitude, longitude];
 
     // Update trip map marker if trip is active
@@ -676,9 +692,18 @@ function handleLocationUpdate(position) {
         state.tripMap.setView(state.userLocation);
     }
 
-    // Update main map marker if it exists
+    // Update main map marker and follow location if trip is active on map page
     if (state.userMarker && state.map) {
         state.userMarker.setLatLng(state.userLocation);
+        
+        // If trip is active on map page, follow the user's location
+        if (state.isTripActive && state.currentPage === 'map-page') {
+            state.map.panTo(state.userLocation, {
+                animate: true,
+                duration: 1,
+                easeLinearity: 0.25
+            });
+        }
     }
 
     // Add to path if trip is active
@@ -687,9 +712,20 @@ function handleLocationUpdate(position) {
 
         // Update path polyline on trip map
         updatePathPolyline();
+        
+        // Update path polyline on main map if on map page
+        if (state.currentPage === 'map-page') {
+            updateMapPathPolyline();
+        }
 
         // Update distance
         updateDistance();
+        
+        // Update map page distance and speed displays
+        if (state.currentPage === 'map-page') {
+            updateMapDistance();
+            updateMapSpeed(speed);
+        }
     }
 }
 
@@ -759,8 +795,15 @@ function startTimer() {
     state.intervalId = setInterval(() => {
         if (!state.isPaused && state.startTime) {
             const elapsed = Math.floor((Date.now() - state.startTime - state.totalPausedTime) / 1000);
+            
+            // Update modal timer
             if (elements.tripDuration) {
                 elements.tripDuration.textContent = formatDuration(elapsed);
+            }
+            
+            // Update map page timer
+            if (elements.mapTripTimer) {
+                elements.mapTripTimer.textContent = formatDuration(elapsed);
             }
         }
     }, 1000);
@@ -780,6 +823,301 @@ function formatDuration(seconds) {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// ===== MAP PAGE TRIP FUNCTIONS =====
+
+// Start trip on map page
+function startMapTrip() {
+    if (!state.currentUser) {
+        addNotification('Please sign in to start a trip', 'error');
+        return;
+    }
+
+    state.isTripActive = true;
+    state.isPaused = false;
+    state.path = [];
+    state.startTime = Date.now();
+    state.totalPausedTime = 0;
+
+    // Animate button transition with GSAP
+    if (typeof gsap !== 'undefined' && elements.mapStartTripBtn) {
+        gsap.to(elements.mapStartTripBtn, {
+            scale: 0.9,
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                elements.mapStartTripBtn.style.display = 'none';
+                elements.mapPauseTripBtn.style.display = 'flex';
+                elements.mapEndTripBtn.style.display = 'flex';
+                
+                gsap.fromTo([elements.mapPauseTripBtn, elements.mapEndTripBtn], 
+                    { scale: 0.9, opacity: 0 },
+                    { scale: 1, opacity: 1, duration: 0.3, ease: 'power2.out', stagger: 0.1 }
+                );
+            }
+        });
+    } else {
+        elements.mapStartTripBtn.style.display = 'none';
+        elements.mapPauseTripBtn.style.display = 'flex';
+        elements.mapEndTripBtn.style.display = 'flex';
+    }
+
+    // Animate timer icon with GSAP
+    if (typeof gsap !== 'undefined') {
+        const timerIcon = document.querySelector('.timer-icon');
+        if (timerIcon) {
+            gsap.to(timerIcon, {
+                rotation: 360,
+                duration: 0.8,
+                ease: 'power2.out'
+            });
+        }
+    }
+
+    // Reset stats
+    if (elements.mapTripTimer) elements.mapTripTimer.textContent = '00:00:00';
+    if (elements.mapTripDistance) elements.mapTripDistance.textContent = '0.00 km';
+    if (elements.mapTripSpeed) elements.mapTripSpeed.textContent = '0.00 km/h';
+
+    // Clear old path polyline if exists
+    if (state.pathPolyline && state.map) {
+        state.map.removeLayer(state.pathPolyline);
+        state.pathPolyline = null;
+    }
+
+    // Start location tracking (use the shared function)
+    startLocationTracking();
+
+    // Start timer (use the shared function)
+    startTimer();
+
+    // Show notification
+    addNotification('Trip started! The map will follow your location.', 'success');
+}
+
+// Pause trip on map page
+function pauseMapTrip() {
+    state.isPaused = true;
+    state.pauseTime = Date.now();
+
+    // Animate button transition
+    if (typeof gsap !== 'undefined') {
+        gsap.to(elements.mapPauseTripBtn, {
+            scale: 0.9,
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                elements.mapPauseTripBtn.style.display = 'none';
+                elements.mapResumeTripBtn.style.display = 'flex';
+                
+                gsap.fromTo(elements.mapResumeTripBtn, 
+                    { scale: 0.9, opacity: 0 },
+                    { scale: 1, opacity: 1, duration: 0.3, ease: 'power2.out' }
+                );
+            }
+        });
+    } else {
+        elements.mapPauseTripBtn.style.display = 'none';
+        elements.mapResumeTripBtn.style.display = 'flex';
+    }
+
+    // Stop location tracking
+    stopLocationTracking();
+
+    // Stop timer
+    stopTimer();
+
+    addNotification('Trip paused. Take a break!', 'info');
+}
+
+// Resume trip on map page
+function resumeMapTrip() {
+    state.isPaused = false;
+    if (state.pauseTime) {
+        state.totalPausedTime += Date.now() - state.pauseTime;
+        state.pauseTime = null;
+    }
+
+    // Animate button transition
+    if (typeof gsap !== 'undefined') {
+        gsap.to(elements.mapResumeTripBtn, {
+            scale: 0.9,
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                elements.mapResumeTripBtn.style.display = 'none';
+                elements.mapPauseTripBtn.style.display = 'flex';
+                
+                gsap.fromTo(elements.mapPauseTripBtn, 
+                    { scale: 0.9, opacity: 0 },
+                    { scale: 1, opacity: 1, duration: 0.3, ease: 'power2.out' }
+                );
+            }
+        });
+    } else {
+        elements.mapResumeTripBtn.style.display = 'none';
+        elements.mapPauseTripBtn.style.display = 'flex';
+    }
+
+    // Resume location tracking
+    startLocationTracking();
+
+    // Resume timer
+    startTimer();
+
+    addNotification('Trip resumed! Keep going!', 'success');
+}
+
+// End trip on map page
+function endMapTrip() {
+    if (!state.isTripActive) return;
+
+    // Calculate final stats
+    const endTime = Date.now();
+    const totalTime = endTime - state.startTime - state.totalPausedTime;
+    const duration = formatDuration(Math.floor(totalTime / 1000));
+    const distance = calculateTotalDistance();
+
+    // Create trip data
+    const tripData = {
+        userId: state.currentUser.uid,
+        duration: duration,
+        distance: distance.toFixed(2),
+        path: state.path,
+        createdAt: serverTimestamp()
+    };
+
+    // Save to Firestore
+    saveTrip(tripData);
+
+    // Animate ending
+    if (typeof gsap !== 'undefined' && elements.mapTripControls) {
+        gsap.to(elements.mapTripControls, {
+            scale: 1.05,
+            duration: 0.2,
+            yoyo: true,
+            repeat: 1,
+            ease: 'power2.inOut'
+        });
+    }
+
+    // Reset state
+    resetMapTripState();
+
+    addNotification(`Trip completed! Distance: ${distance.toFixed(2)} km, Duration: ${duration}`, 'success');
+}
+
+// Reset map trip state
+function resetMapTripState() {
+    state.isTripActive = false;
+    state.isPaused = false;
+    state.path = [];
+    state.startTime = null;
+    state.pauseTime = null;
+    state.totalPausedTime = 0;
+
+    // Clear path polyline from main map
+    if (state.pathPolyline && state.map) {
+        state.map.removeLayer(state.pathPolyline);
+        state.pathPolyline = null;
+    }
+
+    // Stop tracking
+    stopLocationTracking();
+    stopTimer();
+
+    // Reset UI with animation
+    if (typeof gsap !== 'undefined') {
+        gsap.to([elements.mapPauseTripBtn, elements.mapResumeTripBtn, elements.mapEndTripBtn], {
+            scale: 0.9,
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                elements.mapPauseTripBtn.style.display = 'none';
+                elements.mapResumeTripBtn.style.display = 'none';
+                elements.mapEndTripBtn.style.display = 'none';
+                elements.mapStartTripBtn.style.display = 'flex';
+                
+                gsap.fromTo(elements.mapStartTripBtn, 
+                    { scale: 0.9, opacity: 0 },
+                    { scale: 1, opacity: 1, duration: 0.3, ease: 'power2.out' }
+                );
+            }
+        });
+    } else {
+        elements.mapPauseTripBtn.style.display = 'none';
+        elements.mapResumeTripBtn.style.display = 'none';
+        elements.mapEndTripBtn.style.display = 'none';
+        elements.mapStartTripBtn.style.display = 'flex';
+    }
+
+    if (elements.mapTripTimer) elements.mapTripTimer.textContent = '00:00:00';
+    if (elements.mapTripDistance) elements.mapTripDistance.textContent = '0.00 km';
+    if (elements.mapTripSpeed) elements.mapTripSpeed.textContent = '0.00 km/h';
+}
+
+// Update path polyline on main map
+function updateMapPathPolyline() {
+    if (state.path.length < 2 || !state.map) return;
+
+    // Remove old polyline
+    if (state.pathPolyline) {
+        state.map.removeLayer(state.pathPolyline);
+    }
+
+    // Add new polyline with gradient effect
+    state.pathPolyline = L.polyline(state.path, {
+        color: '#667eea',
+        weight: 5,
+        opacity: 0.8,
+        smoothFactor: 1
+    }).addTo(state.map);
+}
+
+// Update distance display on map
+function updateMapDistance() {
+    const distance = calculateTotalDistance();
+    if (elements.mapTripDistance) {
+        // Animate the number change
+        if (typeof gsap !== 'undefined') {
+            const currentValue = parseFloat(elements.mapTripDistance.textContent) || 0;
+            gsap.to({ val: currentValue }, {
+                val: distance,
+                duration: 0.5,
+                onUpdate: function() {
+                    elements.mapTripDistance.textContent = `${this.targets()[0].val.toFixed(2)} km`;
+                }
+            });
+        } else {
+            elements.mapTripDistance.textContent = `${distance.toFixed(2)} km`;
+        }
+    }
+}
+
+// Update speed display on map
+function updateMapSpeed(speed) {
+    if (elements.mapTripSpeed && speed !== null) {
+        const speedKmh = (speed * 3.6).toFixed(2);
+        
+        // Animate the number change
+        if (typeof gsap !== 'undefined') {
+            const currentValue = parseFloat(elements.mapTripSpeed.textContent) || 0;
+            gsap.to({ val: currentValue }, {
+                val: parseFloat(speedKmh),
+                duration: 0.5,
+                onUpdate: function() {
+                    elements.mapTripSpeed.textContent = `${this.targets()[0].val.toFixed(2)} km/h`;
+                }
+            });
+        } else {
+            elements.mapTripSpeed.textContent = `${speedKmh} km/h`;
+        }
+    }
 }
 
 // Toggle fullscreen
