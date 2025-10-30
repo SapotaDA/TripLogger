@@ -36,6 +36,9 @@ const state = {
     map: null,
     userMarker: null,
     pathPolyline: null,
+    tripMap: null,
+    tripUserMarker: null,
+    tripPathPolyline: null,
     notifications: []
 };
 
@@ -89,6 +92,10 @@ const elements = {
     profileAvatar: document.getElementById('profile-avatar'),
     profileName: document.getElementById('profile-name'),
     profileEmail: document.getElementById('profile-email'),
+    profileForm: document.getElementById('profile-form'),
+    editProfileBtn: document.getElementById('edit-profile-btn'),
+    cancelEdit: document.getElementById('cancel-edit'),
+    saveProfile: document.getElementById('save-profile'),
     logoutBtn: document.getElementById('logout-btn'),
 
     // Trips
@@ -307,6 +314,9 @@ function setupEventListeners() {
 
     // Profile
     if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', showLogoutConfirmModal);
+    if (elements.editProfileBtn) elements.editProfileBtn.addEventListener('click', showProfileEditForm);
+    if (elements.cancelEdit) elements.cancelEdit.addEventListener('click', hideProfileEditForm);
+    if (elements.saveProfile) elements.saveProfile.addEventListener('click', saveProfileData);
     
     // Bottom Navigation
     const bottomNav = document.querySelector('.bottom-nav');
@@ -357,6 +367,18 @@ function switchPage(pageId) {
             onComplete: () => {
                 currentPageElement.style.display = 'none';
                 newPageElement.style.display = 'block';
+                
+                // Initialize or refresh map when switching to map page
+                if (pageId === 'map-page') {
+                    setTimeout(() => {
+                        if (!state.map) {
+                            initializeMap();
+                        } else {
+                            state.map.invalidateSize();
+                        }
+                    }, 100);
+                }
+                
                 gsap.fromTo(newPageElement, 
                     { opacity: 0, x: 20 },
                     { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
@@ -367,12 +389,23 @@ function switchPage(pageId) {
         // Fallback without animation
         currentPageElement.style.display = 'none';
         newPageElement.style.display = 'block';
+        
+        // Initialize or refresh map when switching to map page
+        if (pageId === 'map-page') {
+            setTimeout(() => {
+                if (!state.map) {
+                    initializeMap();
+                } else {
+                    state.map.invalidateSize();
+                }
+            }, 100);
+        }
     }
 
     state.currentPage = pageId;
 }
 
-// Initialize Leaflet map
+// Initialize Leaflet map for main map page
 function initializeMap() {
     const mapElement = document.getElementById('map');
     if (!mapElement) {
@@ -381,6 +414,12 @@ function initializeMap() {
     }
 
     try {
+        // Check if map already exists
+        if (state.map) {
+            state.map.invalidateSize();
+            return;
+        }
+
         state.map = L.map('map').setView(state.userLocation, 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -389,27 +428,87 @@ function initializeMap() {
 
         // Add user marker
         state.userMarker = L.marker(state.userLocation).addTo(state.map);
+        
+        // Get current location if available
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                state.userLocation = [latitude, longitude];
+                state.map.setView(state.userLocation, 13);
+                state.userMarker.setLatLng(state.userLocation);
+            });
+        }
     } catch (error) {
         console.error('Error initializing map:', error);
     }
 }
 
+// Initialize Leaflet map for trip modal
+function initializeTripMap() {
+    const tripMapElement = document.getElementById('trip-map');
+    if (!tripMapElement) {
+        console.error('Trip map element not found');
+        return;
+    }
+
+    try {
+        // Check if trip map already exists
+        if (state.tripMap) {
+            state.tripMap.invalidateSize();
+            return;
+        }
+
+        state.tripMap = L.map('trip-map').setView(state.userLocation, 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(state.tripMap);
+
+        // Add user marker
+        state.tripUserMarker = L.marker(state.userLocation).addTo(state.tripMap);
+        
+        // Get current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                state.userLocation = [latitude, longitude];
+                state.tripMap.setView(state.userLocation, 15);
+                state.tripUserMarker.setLatLng(state.userLocation);
+            });
+        }
+        
+        console.log('Trip map initialized successfully');
+    } catch (error) {
+        console.error('Error initializing trip map:', error);
+    }
+}
+
 // Start trip
 function startTrip() {
+    if (!state.currentUser) {
+        addNotification('Please sign in to start a trip', 'error');
+        return;
+    }
+
     state.isTripActive = true;
     state.isPaused = false;
     state.path = [];
     state.startTime = Date.now();
     state.totalPausedTime = 0;
 
-    // Update UI
-    elements.startTripBtn.style.display = 'none';
-    elements.pauseTripBtn.style.display = 'inline-block';
-    elements.stopTripBtn.style.display = 'inline-block';
+    // Initialize trip map if not already done
+    if (!state.tripMap) {
+        initializeTripMap();
+    }
+
+    // Update UI - use modal buttons
+    if (elements.modalStartTripBtn) elements.modalStartTripBtn.style.display = 'none';
+    if (elements.modalPauseTripBtn) elements.modalPauseTripBtn.style.display = 'inline-block';
+    if (elements.modalStopTripBtn) elements.modalStopTripBtn.style.display = 'inline-block';
 
     // Reset stats
-    elements.duration.textContent = '00:00:00';
-    elements.distance.textContent = '0.00 km';
+    if (elements.tripDuration) elements.tripDuration.textContent = '00:00:00';
+    if (elements.tripDistance) elements.tripDistance.textContent = '0.00 km';
 
     // Start location tracking
     startLocationTracking();
@@ -426,9 +525,9 @@ function pauseTrip() {
     state.isPaused = true;
     state.pauseTime = Date.now();
 
-    // Update UI
-    elements.pauseTripBtn.style.display = 'none';
-    elements.resumeTripBtn.style.display = 'inline-block';
+    // Update UI - use modal buttons
+    if (elements.modalPauseTripBtn) elements.modalPauseTripBtn.style.display = 'none';
+    if (elements.modalResumeTripBtn) elements.modalResumeTripBtn.style.display = 'inline-block';
 
     // Stop location tracking
     stopLocationTracking();
@@ -447,9 +546,9 @@ function resumeTrip() {
         state.pauseTime = null;
     }
 
-    // Update UI
-    elements.resumeTripBtn.style.display = 'none';
-    elements.pauseTripBtn.style.display = 'inline-block';
+    // Update UI - use modal buttons
+    if (elements.modalResumeTripBtn) elements.modalResumeTripBtn.style.display = 'none';
+    if (elements.modalPauseTripBtn) elements.modalPauseTripBtn.style.display = 'inline-block';
 
     // Resume location tracking
     startLocationTracking();
@@ -510,24 +609,24 @@ function resetTripState() {
     state.pauseTime = null;
     state.totalPausedTime = 0;
 
-    // Clear path polyline
-    if (state.pathPolyline) {
-        state.map.removeLayer(state.pathPolyline);
-        state.pathPolyline = null;
+    // Clear path polyline from trip map
+    if (state.tripPathPolyline && state.tripMap) {
+        state.tripMap.removeLayer(state.tripPathPolyline);
+        state.tripPathPolyline = null;
     }
 
     // Stop tracking
     stopLocationTracking();
     stopTimer();
 
-    // Reset UI
-    elements.startTripBtn.style.display = 'inline-block';
-    elements.pauseTripBtn.style.display = 'none';
-    elements.resumeTripBtn.style.display = 'none';
-    elements.stopTripBtn.style.display = 'none';
+    // Reset UI - use modal buttons
+    if (elements.modalStartTripBtn) elements.modalStartTripBtn.style.display = 'inline-block';
+    if (elements.modalPauseTripBtn) elements.modalPauseTripBtn.style.display = 'none';
+    if (elements.modalResumeTripBtn) elements.modalResumeTripBtn.style.display = 'none';
+    if (elements.modalStopTripBtn) elements.modalStopTripBtn.style.display = 'none';
 
-    elements.duration.textContent = '00:00:00';
-    elements.distance.textContent = '0.00 km';
+    if (elements.tripDuration) elements.tripDuration.textContent = '00:00:00';
+    if (elements.tripDistance) elements.tripDistance.textContent = '0.00 km';
 }
 
 // Start location tracking
@@ -558,20 +657,27 @@ function handleLocationUpdate(position) {
     const { latitude, longitude } = position.coords;
     state.userLocation = [latitude, longitude];
 
-    // Update user marker
-    state.userMarker.setLatLng(state.userLocation);
+    // Update trip map marker if trip is active
+    if (state.tripUserMarker && state.tripMap) {
+        state.tripUserMarker.setLatLng(state.userLocation);
+        state.tripMap.setView(state.userLocation);
+    }
 
-    // Add to path
-    state.path.push([latitude, longitude]);
+    // Update main map marker if it exists
+    if (state.userMarker && state.map) {
+        state.userMarker.setLatLng(state.userLocation);
+    }
 
-    // Update path polyline
-    updatePathPolyline();
+    // Add to path if trip is active
+    if (state.isTripActive && !state.isPaused) {
+        state.path.push([latitude, longitude]);
 
-    // Update distance
-    updateDistance();
+        // Update path polyline on trip map
+        updatePathPolyline();
 
-    // Center map on user
-    state.map.setView(state.userLocation);
+        // Update distance
+        updateDistance();
+    }
 }
 
 // Handle location error
@@ -580,25 +686,35 @@ function handleLocationError(error) {
     addNotification('Unable to get your location. Please check your GPS settings.', 'error');
 }
 
-// Update path polyline on map
+// Update path polyline on trip map
 function updatePathPolyline() {
-    if (state.path.length < 2) return;
+    if (state.path.length < 2 || !state.tripMap) return;
 
-    if (state.pathPolyline) {
-        state.map.removeLayer(state.pathPolyline);
+    // Remove old polyline
+    if (state.tripPathPolyline) {
+        state.tripMap.removeLayer(state.tripPathPolyline);
     }
 
-    state.pathPolyline = L.polyline(state.path, {
-        color: '#007bff',
+    // Add new polyline
+    state.tripPathPolyline = L.polyline(state.path, {
+        color: '#FF6B35',
         weight: 4,
-        opacity: 0.7
-    }).addTo(state.map);
+        opacity: 0.8
+    }).addTo(state.tripMap);
+
+    // Fit map to show full path
+    if (state.path.length > 1) {
+        const bounds = L.latLngBounds(state.path);
+        state.tripMap.fitBounds(bounds, { padding: [50, 50] });
+    }
 }
 
 // Update distance display
 function updateDistance() {
     const distance = calculateTotalDistance();
-    elements.distance.textContent = `${distance.toFixed(2)} km`;
+    if (elements.tripDistance) {
+        elements.tripDistance.textContent = `${distance.toFixed(2)} km`;
+    }
 }
 
 // Calculate total distance
@@ -628,9 +744,11 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 // Start timer
 function startTimer() {
     state.intervalId = setInterval(() => {
-        if (!state.isPaused) {
+        if (!state.isPaused && state.startTime) {
             const elapsed = Math.floor((Date.now() - state.startTime - state.totalPausedTime) / 1000);
-            elements.duration.textContent = formatDuration(elapsed);
+            if (elements.tripDuration) {
+                elements.tripDuration.textContent = formatDuration(elapsed);
+            }
         }
     }, 1000);
 }
@@ -810,6 +928,63 @@ function shareTrip() {
         }).catch(() => {
             addNotification('Unable to share trip. Please copy the URL manually.', 'error');
         });
+    }
+}
+
+// Profile edit functions
+function showProfileEditForm() {
+    if (elements.profileForm) {
+        elements.profileForm.style.display = 'block';
+    }
+    if (elements.editProfileBtn) {
+        elements.editProfileBtn.style.display = 'none';
+    }
+}
+
+function hideProfileEditForm() {
+    if (elements.profileForm) {
+        elements.profileForm.style.display = 'none';
+    }
+    if (elements.editProfileBtn) {
+        elements.editProfileBtn.style.display = 'block';
+    }
+}
+
+async function saveProfileData(e) {
+    if (e) e.preventDefault();
+    
+    if (!state.currentUser) return;
+
+    try {
+        const userData = {
+            uid: state.currentUser.uid,
+            email: document.getElementById('edit-email')?.value || state.currentUser.email,
+            name: document.getElementById('edit-name')?.value || '',
+            birthday: document.getElementById('edit-birthday')?.value || '',
+            gender: document.getElementById('edit-gender')?.value || '',
+            location: document.getElementById('edit-location')?.value || '',
+            weight: parseFloat(document.getElementById('edit-weight')?.value) || 0
+        };
+
+        // Save to Firestore
+        const userQuery = query(collection(db, 'users'), where('uid', '==', state.currentUser.uid));
+        const userSnapshot = await getDocs(userQuery);
+        
+        if (!userSnapshot.empty) {
+            const userDoc = userSnapshot.docs[0];
+            await updateDoc(doc(db, 'users', userDoc.id), userData);
+        } else {
+            await addDoc(collection(db, 'users'), userData);
+        }
+
+        addNotification('Profile updated successfully!', 'success');
+        hideProfileEditForm();
+        
+        // Update display
+        if (elements.profileName) elements.profileName.textContent = userData.name || state.currentUser.email.split('@')[0];
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        addNotification('Failed to save profile. Please try again.', 'error');
     }
 }
 

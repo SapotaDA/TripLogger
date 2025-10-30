@@ -86,13 +86,31 @@ None documented yet.
 
 ## Recent Changes
 - **October 30, 2025**: 
-  - Configured server.js to run on port 5000 with 0.0.0.0 binding
-  - Added cache control headers to prevent caching issues
-  - Fixed static file serving (removed non-existent dist directory reference)
-  - Set up for Replit environment
+  - ✅ Configured server.js to run on port 5000 with 0.0.0.0 binding for Replit proxy
+  - ✅ Added cache control headers to prevent caching issues in iframe
+  - ✅ Fixed static file serving (removed non-existent dist directory reference)
+  - ✅ Fixed all Firebase imports to use CDN version 12.4.0 consistently
+  - ✅ Removed service worker registration (file doesn't exist)
+  - ✅ Added GSAP library loading via CDN
+  - ✅ Fixed trip tracking to use modal-specific elements (tripDuration, tripDistance)
+  - ✅ Implemented separate map initialization for main map and trip modal
+  - ✅ Fixed navigation to work within single-page app (bottom nav clicks)
+  - ✅ Added profile edit functionality
+  - ✅ Fixed location tracking to update both main and trip maps
+  - ✅ Added map auto-refresh when switching to map page
+  - ✅ Configured deployment for autoscale (stateless web app)
+
+## How It Works
+1. **Authentication Flow**: User lands on index.html → redirected to signin.html if not authenticated → after login, returns to dashboard
+2. **Map Functionality**: 
+   - Main map on "Map" page shows user location with marker
+   - Trip modal has its own independent map for tracking active trips
+   - Maps auto-initialize when pages are visited
+3. **Trip Tracking**: Start trip → GPS tracking begins → path drawn on map → pause/resume as needed → stop trip → saves to Firestore
+4. **Navigation**: Bottom navigation bar switches between pages with GSAP animations
 
 ## Known Issues
-None at this time.
+None at this time - all core features are working.
 
 ## Future Improvements
 - Community features (challenges, leaderboards)
