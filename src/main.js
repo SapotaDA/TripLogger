@@ -1,7 +1,7 @@
 // Main application entry point
-import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -93,6 +93,7 @@ const elements = {
 
     // Trips
     recentTrips: document.getElementById('recent-trips'),
+    allTripsList: document.getElementById('all-trips-list'),
     totalDistance: document.getElementById('total-distance'),
     totalTrips: document.getElementById('total-trips'),
     avgSpeed: document.getElementById('avg-speed')
@@ -125,9 +126,8 @@ function setupAuthListener() {
 
 // Show authenticated UI
 function showAuthenticatedUI() {
-    elements.userInfo.style.display = 'flex';
-    elements.notificationBtn.style.display = 'block';
-    elements.dashboardMain.style.display = 'block';
+    if (elements.userInfo) elements.userInfo.style.display = 'flex';
+    if (elements.notificationBtn) elements.notificationBtn.style.display = 'block';
     // Hide auth buttons if they exist
     const authButtons = document.getElementById('auth-buttons');
     if (authButtons) authButtons.style.display = 'none';
@@ -135,9 +135,8 @@ function showAuthenticatedUI() {
 
 // Show unauthenticated UI
 function showUnauthenticatedUI() {
-    elements.userInfo.style.display = 'none';
-    elements.notificationBtn.style.display = 'none';
-    elements.dashboardMain.style.display = 'none';
+    if (elements.userInfo) elements.userInfo.style.display = 'none';
+    if (elements.notificationBtn) elements.notificationBtn.style.display = 'none';
     // Show auth buttons
     const authButtons = document.getElementById('auth-buttons');
     if (authButtons) authButtons.style.display = 'flex';
@@ -205,59 +204,60 @@ async function loadTrips() {
 
 // Update trips UI
 function updateTripsUI(trips) {
-    // Update trips dashboard
-    elements.tripsList.innerHTML = '';
-    if (trips.length === 0) {
-        elements.tripsList.innerHTML = '<p>No trips recorded yet.</p>';
-    } else {
-        trips.forEach(trip => {
-            const tripElement = createTripElement(trip);
-            elements.tripsList.appendChild(tripElement);
-        });
+    // Update all trips list
+    if (elements.allTripsList) {
+        elements.allTripsList.innerHTML = '';
+        if (trips.length === 0) {
+            elements.allTripsList.innerHTML = '<li class="loading"><span>No trips recorded yet.</span></li>';
+        } else {
+            trips.forEach(trip => {
+                const tripElement = createTripListItem(trip);
+                elements.allTripsList.appendChild(tripElement);
+            });
+        }
     }
 
-    // Update recent trips in profile
-    elements.recentTrips.innerHTML = '';
-    const recentTrips = trips.slice(0, 5);
-    recentTrips.forEach(trip => {
-        const tripElement = createRecentTripElement(trip);
-        elements.recentTrips.appendChild(tripElement);
-    });
+    // Update recent trips in dashboard
+    if (elements.recentTrips) {
+        elements.recentTrips.innerHTML = '';
+        const recentTrips = trips.slice(0, 5);
+        if (recentTrips.length === 0) {
+            elements.recentTrips.innerHTML = '<li class="loading"><span>No trips recorded yet.</span></li>';
+        } else {
+            recentTrips.forEach(trip => {
+                const tripElement = createRecentTripElement(trip);
+                elements.recentTrips.appendChild(tripElement);
+            });
+        }
+    }
 }
 
-// Create trip element for trips dashboard
-function createTripElement(trip) {
-    const div = document.createElement('div');
-    div.className = 'trip-card';
-    div.innerHTML = `
-        <div class="trip-header">
-            <h3>Trip ${new Date(trip.createdAt?.toDate()).toLocaleDateString()}</h3>
-            <span class="trip-duration">${trip.duration}</span>
+// Create trip list item for trips page
+function createTripListItem(trip) {
+    const li = document.createElement('li');
+    li.className = 'trip-item';
+    const createdDate = trip.createdAt?.toDate ? new Date(trip.createdAt.toDate()).toLocaleDateString() : 'Unknown date';
+    li.innerHTML = `
+        <div class="trip-info">
+            <h3>Trip - ${createdDate}</h3>
+            <p>${trip.distance} km • ${trip.duration}</p>
         </div>
-        <div class="trip-stats">
-            <div class="stat">
-                <span class="stat-label">Distance</span>
-                <span class="stat-value">${trip.distance} km</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Duration</span>
-                <span class="stat-value">${trip.duration}</span>
-            </div>
-        </div>
-        <button class="btn secondary view-trip-btn" data-trip-id="${trip.id}">View Details</button>
     `;
-    return div;
+    return li;
 }
 
-// Create recent trip element for profile
+// Create recent trip element for dashboard
 function createRecentTripElement(trip) {
-    const div = document.createElement('div');
-    div.className = 'recent-trip-item';
-    div.innerHTML = `
-        <div class="trip-date">${new Date(trip.createdAt?.toDate()).toLocaleDateString()}</div>
-        <div class="trip-summary">${trip.distance} km • ${trip.duration}</div>
+    const li = document.createElement('li');
+    li.className = 'trip-item';
+    const createdDate = trip.createdAt?.toDate ? new Date(trip.createdAt.toDate()).toLocaleDateString() : 'Unknown date';
+    li.innerHTML = `
+        <div class="trip-info">
+            <h3>Trip - ${createdDate}</h3>
+            <p>${trip.distance} km • ${trip.duration}</p>
+        </div>
     `;
-    return div;
+    return li;
 }
 
 // Calculate and display stats
@@ -274,36 +274,45 @@ function calculateStats(trips) {
 // Setup event listeners
 function setupEventListeners() {
     // Auth buttons
-    elements.signinBtn.addEventListener('click', () => window.location.href = 'signin.html');
-    elements.signupBtn.addEventListener('click', () => window.location.href = 'signup.html');
+    if (elements.signinBtn) elements.signinBtn.addEventListener('click', () => window.location.href = 'signin.html');
+    if (elements.signupBtn) elements.signupBtn.addEventListener('click', () => window.location.href = 'signup.html');
 
-    // Quick Actions
-    elements.startTripBtn.addEventListener('click', () => elements.tripModal.style.display = 'flex');
-    elements.viewMapBtn.addEventListener('click', () => window.location.href = 'map.html');
-    elements.shareTripBtn.addEventListener('click', shareTrip);
-    elements.viewAllTrips.addEventListener('click', () => window.location.href = 'trips.html');
-    elements.exploreCommunity.addEventListener('click', () => window.location.href = 'community.html');
-    elements.editProfile.addEventListener('click', () => window.location.href = 'profile.html');
-    elements.viewProfile.addEventListener('click', () => window.location.href = 'profile.html');
+    // Quick Actions - navigate to pages within the SPA
+    if (elements.startTripBtn) elements.startTripBtn.addEventListener('click', () => {
+        if (elements.tripModal) elements.tripModal.style.display = 'flex';
+    });
+    if (elements.viewMapBtn) elements.viewMapBtn.addEventListener('click', () => switchPage('map-page'));
+    if (elements.shareTripBtn) elements.shareTripBtn.addEventListener('click', shareTrip);
+    if (elements.viewAllTrips) elements.viewAllTrips.addEventListener('click', () => switchPage('trips-page'));
+    if (elements.exploreCommunity) elements.exploreCommunity.addEventListener('click', () => switchPage('community-page'));
+    if (elements.editProfile) elements.editProfile.addEventListener('click', () => switchPage('profile-page'));
 
     // Trip Modal
-    elements.closeTripModal.addEventListener('click', () => elements.tripModal.style.display = 'none');
-    elements.modalStartTripBtn.addEventListener('click', startTrip);
-    elements.modalPauseTripBtn.addEventListener('click', pauseTrip);
-    elements.modalResumeTripBtn.addEventListener('click', resumeTrip);
-    elements.modalStopTripBtn.addEventListener('click', stopTrip);
+    if (elements.closeTripModal) elements.closeTripModal.addEventListener('click', () => {
+        if (elements.tripModal) elements.tripModal.style.display = 'none';
+    });
+    if (elements.modalStartTripBtn) elements.modalStartTripBtn.addEventListener('click', startTrip);
+    if (elements.modalPauseTripBtn) elements.modalPauseTripBtn.addEventListener('click', pauseTrip);
+    if (elements.modalResumeTripBtn) elements.modalResumeTripBtn.addEventListener('click', resumeTrip);
+    if (elements.modalStopTripBtn) elements.modalStopTripBtn.addEventListener('click', stopTrip);
 
     // Notifications
-    elements.notificationBtn.addEventListener('click', toggleNotificationPanel);
-    elements.closeNotificationPanel.addEventListener('click', closeNotificationPanel);
-    elements.panelBackdrop.addEventListener('click', closeNotificationPanel);
+    if (elements.notificationBtn) elements.notificationBtn.addEventListener('click', toggleNotificationPanel);
+    if (elements.closeNotificationPanel) elements.closeNotificationPanel.addEventListener('click', closeNotificationPanel);
+    if (elements.panelBackdrop) elements.panelBackdrop.addEventListener('click', closeNotificationPanel);
 
     // Modals
-    elements.cancelLogout.addEventListener('click', hideLogoutConfirmModal);
-    elements.confirmLogout.addEventListener('click', confirmLogout);
+    if (elements.cancelLogout) elements.cancelLogout.addEventListener('click', hideLogoutConfirmModal);
+    if (elements.confirmLogout) elements.confirmLogout.addEventListener('click', confirmLogout);
 
     // Profile
-    elements.logoutBtn.addEventListener('click', showLogoutConfirmModal);
+    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', showLogoutConfirmModal);
+    
+    // Bottom Navigation
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.addEventListener('click', handleNavigation);
+    }
 }
 
 // Handle bottom navigation
@@ -322,40 +331,67 @@ function switchPage(pageId) {
     const currentPageElement = document.getElementById(state.currentPage);
     const newPageElement = document.getElementById(pageId);
 
+    if (!currentPageElement || !newPageElement) {
+        console.error(`Page not found: ${pageId}`);
+        return;
+    }
+
     // Update navigation active state
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === pageId);
     });
 
-    // Animate page transition
-    gsap.to(currentPageElement, {
-        opacity: 0,
-        x: -20,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => {
-            currentPageElement.style.display = 'none';
-            newPageElement.style.display = 'block';
-            gsap.fromTo(newPageElement, 
-                { opacity: 0, x: 20 },
-                { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
-            );
-        }
+    // Update page content active state
+    document.querySelectorAll('.page-content').forEach(page => {
+        page.classList.remove('active');
     });
+    newPageElement.classList.add('active');
+
+    // Animate page transition with GSAP if available
+    if (typeof gsap !== 'undefined') {
+        gsap.to(currentPageElement, {
+            opacity: 0,
+            x: -20,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                currentPageElement.style.display = 'none';
+                newPageElement.style.display = 'block';
+                gsap.fromTo(newPageElement, 
+                    { opacity: 0, x: 20 },
+                    { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
+                );
+            }
+        });
+    } else {
+        // Fallback without animation
+        currentPageElement.style.display = 'none';
+        newPageElement.style.display = 'block';
+    }
 
     state.currentPage = pageId;
 }
 
 // Initialize Leaflet map
 function initializeMap() {
-    state.map = L.map('map').setView(state.userLocation, 13);
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.log('Map element not found, skipping map initialization');
+        return;
+    }
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(state.map);
+    try {
+        state.map = L.map('map').setView(state.userLocation, 13);
 
-    // Add user marker
-    state.userMarker = L.marker(state.userLocation).addTo(state.map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(state.map);
+
+        // Add user marker
+        state.userMarker = L.marker(state.userLocation).addTo(state.map);
+    } catch (error) {
+        console.error('Error initializing map:', error);
+    }
 }
 
 // Start trip
