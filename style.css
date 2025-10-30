@@ -952,6 +952,328 @@ header h1 {
   }
 }
 
+/* Map Trip Controls */
+.map-trip-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 320px;
+  max-width: 90%;
+  animation: slideUpFade 0.5s ease-out;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.map-trip-controls::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--primary-gradient);
+  opacity: 0.05;
+  border-radius: 24px;
+  pointer-events: none;
+}
+
+/* Trip Timer Display */
+.trip-timer-display {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-glass);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.timer-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  box-shadow: var(--shadow-glow);
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: var(--shadow-glow);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+  }
+}
+
+.timer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timer-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.timer-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+/* Trip Stats Mini */
+.trip-stats-mini {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-around;
+}
+
+.stat-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-glass);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  flex: 1;
+  transition: all var(--transition-normal);
+}
+
+.stat-mini:hover {
+  background: var(--bg-card);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+}
+
+.stat-mini i {
+  font-size: 1.25rem;
+  color: var(--accent-color);
+}
+
+.stat-mini span {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Trip Action Buttons */
+.trip-action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.btn-trip {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--shadow-card);
+}
+
+.btn-trip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.btn-trip:hover::before {
+  left: 100%;
+}
+
+.btn-trip i {
+  font-size: 1rem;
+  transition: transform var(--transition-fast);
+}
+
+.btn-trip:hover i {
+  transform: scale(1.15);
+}
+
+.btn-trip-start {
+  background: var(--primary-gradient);
+  color: white;
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-trip-start:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+}
+
+.btn-trip-start:active {
+  transform: translateY(-1px);
+}
+
+.btn-trip-pause {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+}
+
+.btn-trip-pause:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(240, 147, 251, 0.5);
+}
+
+.btn-trip-resume {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+}
+
+.btn-trip-resume:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(79, 172, 254, 0.5);
+}
+
+.btn-trip-end {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  color: white;
+}
+
+.btn-trip-end:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(255, 107, 107, 0.5);
+}
+
+/* Map Page Layout */
+#map-page {
+  padding: 0;
+  position: relative;
+}
+
+#map-page #map {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Responsive Trip Controls */
+@media (max-width: 768px) {
+  .map-trip-controls {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    min-width: unset;
+    padding: 1rem;
+  }
+
+  .trip-timer-display {
+    padding: 0.75rem;
+  }
+
+  .timer-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .timer-value {
+    font-size: 1.5rem;
+  }
+
+  .trip-stats-mini {
+    gap: 0.5rem;
+  }
+
+  .stat-mini {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .stat-mini i {
+    font-size: 1rem;
+  }
+
+  .stat-mini span {
+    font-size: 0.75rem;
+  }
+
+  .trip-action-buttons {
+    gap: 0.5rem;
+  }
+
+  .btn-trip {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-trip span {
+    display: none;
+  }
+
+  .btn-trip i {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-trip-controls {
+    gap: 0.75rem;
+  }
+
+  .trip-action-buttons {
+    flex-wrap: wrap;
+  }
+
+  .btn-trip {
+    min-width: calc(50% - 0.25rem);
+  }
+}
+
 /* Print styles */
 @media print {
   body {
@@ -959,7 +1281,7 @@ header h1 {
     color: black !important;
   }
 
-  .btn, .nav-item, .action-card {
+  .btn, .nav-item, .action-card, .map-trip-controls {
     display: none !important;
   }
 }
