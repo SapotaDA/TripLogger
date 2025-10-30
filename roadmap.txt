@@ -1,0 +1,9 @@
+trip-logger-pwa
+-- index.html         # Your main app page
+-- style.css          # Your styles
+-- app.js             # Your main application logic
+-- sw.js              # Your Service Worker file (can be empty for now)
+-- manifest.json      # Your PWA manifest file (can be basic for now)
+-- icons            # Folder for your app icons
+   -- icon-192x192.png
+   -- icon-512x512.png

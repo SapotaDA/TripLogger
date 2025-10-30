@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Professional geo-location trip tracking app with real-time mapping, community features, and comprehensive analytics.">
+    <meta name="keywords" content="trip tracker, GPS tracking, travel app, location logging, fitness tracking">
+    <title>GeoTrip Logger - Professional Trip Tracking</title>
+
+    <!-- External Resources -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🗺️%3C/text%3E%3C/svg%3E">
+
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script">
+    <link rel="preload" href="src/main.js" as="script">
+</head>
+
+<body>
+    <!-- Application Container -->
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <h1>GeoTrip Logger</h1>
+            <div class="header-actions">
+                <!-- Auth Buttons (shown when not logged in) -->
+                <div id="auth-buttons">
+                    <button class="btn btn-secondary" id="signin-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Sign In
+                    </button>
+                    <button class="btn btn-primary" id="signup-btn">
+                        <i class="fas fa-user-plus"></i>
+                        Sign Up
+                    </button>
+                </div>
+
+                <!-- User Info (shown when logged in) -->
+                <div id="user-info" style="display: none;">
+                    <button class="icon-btn" id="notification-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notification-badge" style="display: none;">0</span>
+                    </button>
+                    <img src="" alt="User Avatar" class="user-avatar" id="user-avatar">
+                    <span class="user-name" id="user-name"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="page-container">
+            <!-- Dashboard Page -->
+            <div class="page-content active" id="dashboard-page">
+                <!-- Hero Section -->
+                <section class="dashboard-header">
+                    <h2>Track Your Adventures</h2>
+                    <p>Professional GPS tracking with community insights and detailed analytics</p>
+                </section>
+
+                <!-- Quick Actions Grid -->
+                <section class="quick-actions">
+                    <div class="action-card" id="start-trip-btn">
+                        <i class="fas fa-play-circle icon"></i>
+                        <h3>Start Trip</h3>
+                        <p>Begin tracking your journey with precision GPS</p>
+                    </div>
+                    <div class="action-card" id="view-map-btn">
+                        <i class="fas fa-map-marked-alt icon"></i>
+                        <h3>View Map</h3>
+                        <p>Explore interactive maps and route planning</p>
+                    </div>
+                    <div class="action-card" id="share-trip-btn">
+                        <i class="fas fa-share-alt icon"></i>
+                        <h3>Share Trip</h3>
+                        <p>Share your adventures with the community</p>
+                    </div>
+                    <div class="action-card" id="view-all-trips">
+                        <i class="fas fa-list icon"></i>
+                        <h3>All Trips</h3>
+                        <p>View comprehensive trip history and analytics</p>
+                    </div>
+                    <div class="action-card" id="explore-community">
+                        <i class="fas fa-users icon"></i>
+                        <h3>Community</h3>
+                        <p>Connect with fellow travelers and explorers</p>
+                    </div>
+                    <div class="action-card" id="edit-profile">
+                        <i class="fas fa-user-cog icon"></i>
+                        <h3>Profile</h3>
+                        <p>Manage your account and preferences</p>
+                    </div>
+                </section>
+
+                <!-- Statistics Overview -->
+                <section class="stats-grid">
+                    <div class="stat-card">
+                        <span class="value" id="total-distance">0.00</span>
+                        <span class="label">Total Distance (km)</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="value" id="total-trips">0</span>
+                        <span class="label">Total Trips</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="value" id="avg-speed">0.00</span>
+                        <span class="label">Avg Speed (km/h)</span>
+                    </div>
+                </section>
+
+                <!-- Recent Trips -->
+                <section class="recent-trips">
+                    <h3>Recent Trips</h3>
+                    <ul class="trip-list" id="recent-trips">
+                        <li class="loading">
+                            <div class="spinner"></div>
+                            <span>Loading trips...</span>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+
+            <!-- Map Page -->
+            <div class="page-content" id="map-page">
+                <div id="map"></div>
+            </div>
+
+            <!-- Trips Page -->
+            <div class="page-content" id="trips-page">
+                <h2>All Trips</h2>
+                <ul class="trip-list" id="all-trips-list">
+                    <li class="loading">
+                        <div class="spinner"></div>
+                        <span>Loading trips...</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Community Page -->
+            <div class="page-content" id="community-page">
+                <h2>Travel Community</h2>
+                <div class="community-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="value">1,247</span>
+                            <span class="label">Active Travelers</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="value">5,891</span>
+                            <span class="label">Trips Shared</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="value">127</span>
+                            <span class="label">Countries Visited</span>
+                        </div>
+                    </div>
+                    <p>Join our vibrant community of travelers sharing experiences, tips, and discovering new destinations together.</p>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div class="page-content" id="profile-page">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h2 id="profile-name">Your Name</h2>
+                    <p id="profile-email">your.email@example.com</p>
+                </div>
+
+                <form class="profile-form" id="profile-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="edit-name">Full Name</label>
+                        <input type="text" id="edit-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">Email</label>
+                        <input type="email" id="edit-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-birthday">Birthday</label>
+                        <input type="date" id="edit-birthday" name="birthday">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-gender">Gender</label>
+                        <select id="edit-gender" name="gender">
+                            <option value="">Prefer not to say</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-location">Location</label>
+                        <input type="text" id="edit-location" name="location" placeholder="City, Country">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-weight">Weight (kg)</label>
+                        <input type="number" id="edit-weight" name="weight" min="30" max="300" step="0.1">
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="save-profile">Save Changes</button>
+                    </div>
+                </form>
+
+                <div class="profile-actions">
+                    <button class="btn btn-primary" id="edit-profile-btn">Edit Profile</button>
+                    <button class="btn btn-danger" id="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-page="dashboard-page">
+                <i class="fas fa-home icon"></i>
+                <span>Home</span>
+            </div>
+            <div class="nav-item" data-page="map-page">
+                <i class="fas fa-map icon"></i>
+                <span>Map</span>
+            </div>
+            <div class="nav-item" data-page="trips-page">
+                <i class="fas fa-route icon"></i>
+                <span>Trips</span>
+            </div>
+            <div class="nav-item" data-page="community-page">
+                <i class="fas fa-users icon"></i>
+                <span>Community</span>
+            </div>
+            <div class="nav-item" data-page="profile-page">
+                <i class="fas fa-user icon"></i>
+                <span>Profile</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Trip Modal -->
+    <div class="trip-modal" id="trip-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Start New Trip</h3>
+                <button class="close-modal" id="close-trip-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="trip-map-container">
+                    <div id="trip-map"></div>
+                </div>
+                <div class="trip-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Duration</span>
+                        <span class="stat-value" id="trip-duration">00:00:00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Distance</span>
+                        <span class="stat-value" id="trip-distance">0.00 km</span>
+                    </div>
+                </div>
+                <div class="trip-controls">
+                    <button class="btn btn-primary" id="modal-start-trip-btn">
+                        <i class="fas fa-play"></i>
+                        Start Trip
+                    </button>
+                    <button class="btn btn-secondary" id="modal-pause-trip-btn" style="display: none;">
+                        <i class="fas fa-pause"></i>
+                        Pause
+                    </button>
+                    <button class="btn btn-primary" id="modal-resume-trip-btn" style="display: none;">
+                        <i class="fas fa-play"></i>
+                        Resume
+                    </button>
+                    <button class="btn btn-danger" id="modal-stop-trip-btn" style="display: none;">
+                        <i class="fas fa-stop"></i>
+                        Stop Trip
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notification-panel">
+        <div class="notification-header">
+            <h3>Notifications</h3>
+            <button class="close-modal" id="close-notification-panel">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="notification-content" id="notification-content">
+            <div class="loading">
+                <div class="spinner"></div>
+                <span>Loading notifications...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="trip-modal" id="logout-confirm-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Logout</h3>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to log out? Your current session will end.</p>
+            </div>
+            <div class="trip-controls">
+                <button class="btn btn-secondary" id="cancel-logout">Cancel</button>
+                <button class="btn btn-danger" id="confirm-logout">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Backdrop -->
+    <div class="panel-backdrop" id="panel-backdrop"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="loading">
+            <div class="spinner"></div>
+            <span>Loading...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="src/main.js"></script>
+
+    <!-- Service Worker Registration (for PWA features) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(error => console.log('SW registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
